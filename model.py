@@ -44,7 +44,7 @@ class LayerNormalization(nn.Module):
     def __init__(self, eps: float=10**-6) -> None:
         super().__init__()
         self.eps = eps
-        self.alpha = nn.Parameter(torch.ones(1)) # multiple
+        self.alpha = nn.Parameter(torch.ones(1)) # multiply
         self.bias = nn.Parameter(torch.zeros(1)) # add
 
     def forward(self, x):
@@ -63,10 +63,7 @@ class FeedForwardBlock(nn.Module):
 
     def forward(self, x):
         # (batch, seq_len, d_model) --> (batch, seq_len, d_ff) --> (Batch, Seq_len, d_model)
-        x = self.linear1(x)
-        x = self.dropout(x)
-        x = self.linear2(x)
-        return x
+        return self.linear2(self.dropout(torch.relu(self.linear1(x))))
 
 class MultiHeadAttention(nn.Module):
 
@@ -76,11 +73,11 @@ class MultiHeadAttention(nn.Module):
         self.heads = heads
         assert d_model % heads == 0 # ensure dividable and get d_k
         self.d_k = d_model // heads
-        self.q_linear = nn.Linear(d_model, d_model)
-        self.v_linear = nn.Linear(d_model, d_model)
-        self.k_linear = nn.Linear(d_model, d_model)
+        self.q_linear = nn.Linear(d_model, d_model, bias=False)
+        self.v_linear = nn.Linear(d_model, d_model, bias=False)
+        self.k_linear = nn.Linear(d_model, d_model, bias=False)
+        self.out = nn.Linear(d_model, d_model, bias=False)
         self.dropout = nn.Dropout(dropout)
-        self.out = nn.Linear(d_model, d_model)
 
     @staticmethod
     def attention(q, k, v, mask, dropout: nn.Dropout):
@@ -108,7 +105,7 @@ class MultiHeadAttention(nn.Module):
         x, self.attention_scores = MultiHeadAttention.attention(query, key, value, mask, self.dropout)
 
         # (batch, h, seq_Len, d_k) --> (batch, seq_len, d_model)
-        x = x.transpose(1,2).contiguous().view(x.shape[0], x.shape[1], self.d_model)
+        x = x.transpose(1,2).contiguous().view(x.shape[0], -1, self.d_model) # why??
 
         return self.out(x)
 
@@ -183,7 +180,7 @@ class ProjectionLayer(nn.Module):
 
     def forward(self, x):
         # (Batch, Seq_Len, d_model) --> (Batch, Seq_Len, vocab_size)
-        return torch.log_softmax(self.proj(x), dim=-1)
+        return self.proj(x)
 
 
 class Transformer(nn.Module):
