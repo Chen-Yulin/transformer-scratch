@@ -4,7 +4,7 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, random_split
 
 from dataset import BilingualDataset, casual_mask
-from model_example import build_transformer
+from model import build_transformer
 from config import get_weights_file_path, get_config
 
 from datasets import load_dataset
