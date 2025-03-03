@@ -101,7 +101,7 @@ class MultiHeadAttention(nn.Module):
         d_k = q.shape[-1]
         attention_scores = (q @ k.transpose(-2, -1)) / math.sqrt(d_k)
         if mask is not None:
-            attention_scores.masked_fill(mask == 0, -1e9)
+            attention_scores.masked_fill_(mask == 0, -1e9) # masked_fill_ is a in-place operation, if I use masked_fill, I need a new variable to store the result
         attention_scores = attention_scores.softmax(dim=-1) # (batch, heads, seq_len, seq_len)
         if dropout is not None:
             attention_scores = dropout(attention_scores)
@@ -174,9 +174,9 @@ class Decoder(nn.Module):
         self.layers = layers
         self.norm = LayerNormalization(features)
 
-    def forward(self, x, enc_out, src_mask, trg_mask):
+    def forward(self, x, enc_out, src_mask, tgt_mask):
         for layer in self.layers:
-            x = layer(x, enc_out, src_mask, trg_mask)
+            x = layer(x, enc_out, src_mask, tgt_mask)
         return self.norm(x)
 
 
